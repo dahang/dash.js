@@ -76,31 +76,7 @@ Dash.dependencies.DashMetricsExtensions = function () {
             return null;
         },
 
-        adaptationIsType = function (adaptation, bufferType) {
-            return this.manifestExt.getIsTypeOf(adaptation, bufferType);
-        },
-
-        findMaxBufferIndex = function (period, bufferType) {
-            var adaptationSet,
-                adaptationSetArray,
-                representationArray,
-                adaptationSetArrayIndex;
-
-            if (!period || !bufferType) return -1;
-
-            adaptationSetArray = period.AdaptationSet_asArray;
-            for (adaptationSetArrayIndex = 0; adaptationSetArrayIndex < adaptationSetArray.length; adaptationSetArrayIndex = adaptationSetArrayIndex + 1) {
-                adaptationSet = adaptationSetArray[adaptationSetArrayIndex];
-                representationArray = adaptationSet.Representation_asArray;
-                if (adaptationIsType.call(this, adaptationSet, bufferType)) {
-                    return representationArray.length;
-                }
-            }
-
-            return -1;
-        },
-
-        getBandwidthForRepresentation = function (representationId, periodId) {
+        getBandwidthForRepresentation = function (representationId) {
             var self = this,
                 manifest = self.manifestModel.getValue(),
                 representation,
