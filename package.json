@@ -4,6 +4,7 @@
   "description": "A reference client implementation for the playback of MPEG DASH via Javascript and compliant browsers.",
   "main": "dist/dash.all.js",
   "scripts": {
+    "start": "http-server ./ -a localhost -p 8008 -c-1 -o --cors ",
     "test": "cd build && npm install && grunt"
   },
   "repository": {
@@ -11,5 +12,8 @@
     "url": "https://github.com/Dash-Industry-Forum/dash.js.git"
   },
   "author": "Dash Industry Forum",
-  "license": "BSD"
+  "license": "BSD",
+  "devDependencies": {
+    "http-server": "^0.8.0"
+  }
 }

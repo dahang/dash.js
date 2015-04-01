@@ -5,19 +5,118 @@
     <title>Manual-player instantiation example</title>
 
     <script src="../../dist/dash.debug.js"></script>
+    <script src="../../CxCustomData/conax.js"></script>
+    <script src="../../CxCustomData/cx-dash-if.js"></script>
     <!--dash.all.js should be used in production over dash.debug.js. dash.debug.js is not compressed or obfuscated and the file size is much larger compared with dash.all.js-->
     <!--<script src="../../dist/dash.all.js"></script>-->
 
     <script>
+
+        WIDEVINE_LICENSE_SERVER = "http://190.242.17.13:80/license";
+//        WIDEVINE_LICENSE_SERVER = "http://172.26.252.19:8094/license";
+//        WIDEVINE_LICENSE_SERVER = "http://192.168.2.11:5655/license";
+//        WIDEVINE_LICENSE_SERVER = "http://192.168.2.11:5653/uxp/api/";
+        PLAYREADY_LICENSE_SERVER = "http://190.242.17.14:80/license";
+//        PLAYREADY_LICENSE_SERVER = "http://172.26.252.19:80/uxp/api/";
+//        PLAYREADY_LICENSE_SERVER = "http://192.168.2.11:5656/uxp/api/";
+        var player;
         function init() {
-            var video,context,player;
+
+            var video, context;
             video = document.querySelector("video");
+            video.poster  ="../dash-if-reference-player/app/img/if.jpg";
+            var cxDash = new ConaxDashIf();
+            initConax(cxDash);
             context = new Dash.di.DashContext();
             player = new MediaPlayer(context);
             player.startup();
+
+//            if (!browserSupported(player)) {
+//                return;
+//            }
+
+            player.addEventListener(MediaPlayer.events.LOG, onLog.bind(this));
+            player.addEventListener(MediaPlayer.events.ERROR, onErrLog.bind(this));
+//            player.addEventListener(MediaPlayer.events.METRIC_CHANGED, metricChanged.bind(this));
+//            player.addEventListener(MediaPlayer.events.METRIC_UPDATED, metricUpdated.bind(this));
+//            player.addEventListener(MediaPlayer.events.SWITCH_STREAM, streamSwitch.bind(this));
+
+
+            /**
+             METRICS_CHANGED: "metricschanged",
+             METRIC_CHANGED: "metricchanged",
+             METRIC_UPDATED: "metricupdated",
+             METRIC_ADDED: "metricadded",
+             MANIFEST_LOADED: "manifestloaded",
+             SWITCH_STREAM: "streamswitched",
+             STREAM_INITIALIZED: "streaminitialized",
+             TEXT_TRACK_ADDED: "texttrackadded",
+             BUFFER_LOADED: "bufferloaded",
+             BUFFER_EMPTY: "bufferstalled",
+             ERROR: "error",
+             LOG: "log"
+             *
+             */
+
             player.attachView(video);
             player.setAutoPlay(true);
-            player.attachSource("http://dash.edgesuite.net/envivio/dashpr/clear/Manifest.mpd");
+//            var protectionData = {
+//                "com.widevine.alpha": new MediaPlayer.vo.protection.ProtectionData(WIDEVINE_LICENSE_SERVER),
+//                "com.microsoft.playready": new MediaPlayer.vo.protection.ProtectionData(PLAYREADY_LICENSE_SERVER)
+//            };
+//            player.attachProtectionData(protectionData);
+
+
+            var protectionData = {
+                "com.widevine.alpha": new MediaPlayer.vo.protection.ProtectionData(WIDEVINE_LICENSE_SERVER, {}, "", cxDash.getCxCustomDataForWidevine),
+                "com.microsoft.playready": new MediaPlayer.vo.protection.ProtectionData(PLAYREADY_LICENSE_SERVER)};
+            player.attachProtectionData(protectionData);
+
+
+//            player.attachSource("http://dash.edgesuite.net/envivio/dashpr/clear/Manifest.mpd");
+//            player.attachSource("../../Streams/clear_tears_of_steel.mpd" );
+            player.attachSource("http://localhost:8008/Streams/Encrypted_sintel_mp4box_wv_pr.mpd" );
+//            player.attachSource("../../Streams/Encrypted_sintel_mp4box_wv_pr.mpd" );
+//            player.attachSource("../../Streams/tos_mp4box_wv_pr_fixed_key.mpd" );
+//            player.attachSource("./sample_dash.xml" );
+        }
+        ;
+
+        function initConax(cxDash) {
+
+            cxDash.setGetAuthPlayReadyDataCallback(function () {
+                var cxAuthToken = "node1.f677eb25-d1d2-4507-8cf9-831510c68b41";
+                return cxAuthToken;
+            });
+            cxDash.setGetAuthWidevineDataCallback(function () {
+                var cxAuthToken = "node1.f677eb25-d1d2-4507-8cf9-831510c68b41";
+                return cxAuthToken;
+            });
+        }
+
+        function onLog(e) {
+
+            console.log(e);
+        };
+
+        function onErrLog(e) {
+
+            console.log("!!!DASH!!! ERROR :" +e);
+        };
+
+        function browserSupported(player) {
+            var dashSupported = player.capabilities.supportsMediaSource();
+//            dashSupported = videojs.Dashjs.isSupported(); // Use what videojs is using for now so we do not error on player creation.
+            if (!dashSupported) {
+
+                var notSupportedDiv = document.createElement('div');
+                notSupportedDiv.id = 'dash-not-supported';
+                notSupportedDiv.innerHTML = 'DASH (through Media Source Extensions) is not supported in your browser, you are currently viewing a fallback MP4 playing through Flash or HTML5 video. Try using the latest version of <a href="http://windows.microsoft.com/en-us/internet-explorer/download-ie">IE</a> or <a href="https://www.google.com/intl/en/chrome/browser/">Chrome</a>.';
+                document.body.insertBefore(notSupportedDiv, document.body.firstChild);
+
+                return false;
+            }
+            return true;
         }
     </script>
 
@@ -28,10 +127,14 @@
         }
     </style>
 
-    <body onload="init()">
-        <div>
-            <video controls="true">
-            </video>
-        </div>
-    </body>
+    <style>
+        #dash-not-supported { width: 618px; border: 1px solid #c00; padding: 10px; margin: 10px 0; background-color: rgba(200,0,0,0.5); }
+    </style>
+
+<body onload="init()">
+<div>
+    <video  controls="true">
+    </video>
+</div>
+</body>
 </html>
