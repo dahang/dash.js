@@ -26,6 +26,7 @@
             video = document.querySelector("video");
             video.poster  ="../dash-if-reference-player/app/img/if.jpg";
             var cxDash = new ConaxDashIf();
+//            cxDash.getCxClientInfoForWidevine();
             initConax(cxDash);
             context = new Dash.di.DashContext();
             player = new MediaPlayer(context);
@@ -67,8 +68,11 @@
 //            player.attachProtectionData(protectionData);
 
 
+//            "com.widevine.alpha": new MediaPlayer.vo.protection.ProtectionData(WIDEVINE_LICENSE_SERVER, {}, "", cxDash.getCxCustomDataForWidevine()),
+
+
             var protectionData = {
-                "com.widevine.alpha": new MediaPlayer.vo.protection.ProtectionData(WIDEVINE_LICENSE_SERVER, {}, "", cxDash.getCxCustomDataForWidevine),
+                "com.widevine.alpha": new MediaPlayer.vo.protection.ProtectionData(WIDEVINE_LICENSE_SERVER, {}, "", cxDash.getCxCustomDataForWidevine()),
                 "com.microsoft.playready": new MediaPlayer.vo.protection.ProtectionData(PLAYREADY_LICENSE_SERVER)};
             player.attachProtectionData(protectionData);
 
@@ -76,6 +80,7 @@
 //            player.attachSource("http://dash.edgesuite.net/envivio/dashpr/clear/Manifest.mpd");
 //            player.attachSource("../../Streams/clear_tears_of_steel.mpd" );
             player.attachSource("http://localhost:8008/Streams/Encrypted_sintel_mp4box_wv_pr.mpd" );
+//            player.attachSource("http://localhost:8008/Streams/tos_mp4box_wv_pr_fixed_key.mpd" );
 //            player.attachSource("../../Streams/Encrypted_sintel_mp4box_wv_pr.mpd" );
 //            player.attachSource("../../Streams/tos_mp4box_wv_pr_fixed_key.mpd" );
 //            player.attachSource("./sample_dash.xml" );
