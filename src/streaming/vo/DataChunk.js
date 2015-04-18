@@ -28,67 +28,23 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-MediaPlayer.dependencies.MediaSourceExtensions = function () {
+
+/*
+*  Represents a data structure that keep all the necessary info about a single init/media segment
+* */
+MediaPlayer.vo.DataChunk = function () {
     "use strict";
+    this.streamId = null;
+    this.mediaType = null;
+    this.segmentType = null;
+    this.quality = NaN;
+    this.index = NaN;
+    this.bytes = null;
+    this.start = NaN;
+    this.end = NaN;
+    this.duration = NaN;
 };
 
-MediaPlayer.dependencies.MediaSourceExtensions.prototype = {
-    constructor: MediaPlayer.dependencies.MediaSourceExtensions,
-
-    createMediaSource: function () {
-        "use strict";
-
-        var hasWebKit = ("WebKitMediaSource" in window),
-            hasMediaSource = ("MediaSource" in window);
-
-        if (hasMediaSource) {
-            return new MediaSource();
-        } else if (hasWebKit) {
-            return new WebKitMediaSource();
-        }
-
-        return null;
-    },
-
-    attachMediaSource: function (source, videoModel) {
-        "use strict";
-
-        var objectURL = window.URL.createObjectURL(source);
-
-        videoModel.setSource(objectURL);
-
-        return objectURL;
-    },
-
-    detachMediaSource: function (videoModel) {
-        "use strict";
-        // it seems that any value passed to the setSource is cast to a sting when setting element.src,
-        // so we cannot use null or undefined to reset the element. Use empty string instead.
-        videoModel.setSource("");
-    },
-
-    setDuration: function (source, value) {
-        "use strict";
-
-        if (source.duration != value)
-            source.duration = value;
-
-        return source.duration;
-    },
-
-    signalEndOfStream: function(source) {
-        "use strict";
-
-        var buffers = source.sourceBuffers,
-            ln = buffers.length,
-            i = 0;
-
-        if (source.readyState !== "open") return;
-
-        for (i; i < ln; i += 1) {
-            if (buffers[i].updating) return;
-        }
-
-        source.endOfStream();
-    }
+MediaPlayer.vo.DataChunk.prototype = {
+    constructor: MediaPlayer.vo.DataChunk
 };

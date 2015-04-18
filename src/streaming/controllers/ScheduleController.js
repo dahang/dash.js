@@ -143,7 +143,7 @@ MediaPlayer.dependencies.ScheduleController = function () {
             for (i = 0; i < ln; i += 1) {
                 request = canceledRequests[i];
                 time = request.startTime + (request.duration / 2) + EPSILON;
-                request = this.adapter.getFragmentRequestForTime(this.streamProcessor, currentTrackInfo, time, {timeThreshold: 0});
+                request = this.adapter.getFragmentRequestForTime(this.streamProcessor, currentTrackInfo, time, {timeThreshold: 0, ignoreIsFinished: true});
                 this.fragmentController.prepareFragmentForLoading(fragmentModel, request);
             }
         },
@@ -187,23 +187,12 @@ MediaPlayer.dependencies.ScheduleController = function () {
 
             lastValidationTime = now;
             getRequiredFragmentCount.call(this, onGetRequiredFragmentCount.bind(this));
-
-        },
-
-        clearMetrics = function () {
-            var self = this;
-
-            if (type === null || type === "") {
-                return;
-            }
-
-            self.metricsModel.clearCurrentMetricsForType(type);
         },
 
         onDataUpdateCompleted = function(e) {
             if (e.error) return;
 
-            currentTrackInfo = this.adapter.convertDataToTrack(e.data.currentRepresentation);
+            currentTrackInfo = this.adapter.convertDataToTrack(this.manifestModel.getValue(), e.data.currentRepresentation);
         },
 
         onStreamUpdated = function(e) {
@@ -211,7 +200,7 @@ MediaPlayer.dependencies.ScheduleController = function () {
 
             currentTrackInfo = this.streamProcessor.getCurrentTrack();
 
-            if (!isDynamic) {
+            if (!isDynamic || this.liveEdgeFinder.getLiveEdge() !== null) {
                 ready = true;
             }
 
@@ -272,9 +261,7 @@ MediaPlayer.dependencies.ScheduleController = function () {
             }
         },
 
-        onBufferLevelUpdated = function(e) {
-            var self = this;
-            self.metricsModel.addBufferLevel(type, new Date(), e.data.bufferLevel);
+        onBufferLevelUpdated = function(/*e*/) {
             validate.call(this);
         },
 
@@ -365,7 +352,7 @@ MediaPlayer.dependencies.ScheduleController = function () {
                 currentLiveStart = self.playbackController.getLiveStartTime(),
                 actualStartTime;
             // get a request for a start time
-            request = self.adapter.getFragmentRequestForTime(self.streamProcessor, currentTrackInfo, startTime);
+            request = self.adapter.getFragmentRequestForTime(self.streamProcessor, currentTrackInfo, startTime, {ignoreIsFinished: true});
             actualStartTime = request.startTime;
 
             if (isNaN(currentLiveStart) || (actualStartTime > currentLiveStart)) {
@@ -384,10 +371,12 @@ MediaPlayer.dependencies.ScheduleController = function () {
         log: undefined,
         system: undefined,
         metricsModel: undefined,
+        manifestModel: undefined,
         metricsExt: undefined,
         scheduleWhilePaused: undefined,
         timelineConverter: undefined,
         abrController: undefined,
+        playbackController: undefined,
         adapter: undefined,
         scheduleRulesCollection: undefined,
         rulesController: undefined,
@@ -426,7 +415,6 @@ MediaPlayer.dependencies.ScheduleController = function () {
             type = typeValue;
             self.setMediaType(type);
             self.streamProcessor = streamProcessor;
-            self.playbackController = streamProcessor.playbackController;
             self.fragmentController = streamProcessor.fragmentController;
             self.liveEdgeFinder = streamProcessor.liveEdgeFinder;
             self.bufferController = streamProcessor.bufferController;
@@ -462,7 +450,6 @@ MediaPlayer.dependencies.ScheduleController = function () {
             self.bufferController.unsubscribe(MediaPlayer.dependencies.BufferController.eventList.ENAME_BUFFER_LEVEL_BALANCED, self.scheduleRulesCollection.bufferLevelRule);
             fragmentModel.abortRequests();
             self.fragmentController.detachModel(fragmentModel);
-            clearMetrics.call(self);
             fragmentsToLoad = 0;
         },
 

@@ -66,7 +66,6 @@ Dash.dependencies.RepresentationController = function () {
             if (type !== "video" && type !== "audio" && type !== "fragmentedText") {
                 updating = false;
                 self.notify(Dash.dependencies.RepresentationController.eventList.ENAME_DATA_UPDATE_COMPLETED, {data: data, currentRepresentation: currentRepresentation});
-                addRepresentationSwitch.call(self);
                 return;
             }
 
@@ -100,12 +99,17 @@ Dash.dependencies.RepresentationController = function () {
 
         isAllRepresentationsUpdated = function() {
             for (var i = 0, ln = availableRepresentations.length; i < ln; i += 1) {
-                if (availableRepresentations[i].segmentAvailabilityRange === null || availableRepresentations[i].initialization === null) return false;
+                var segmentInfoType = availableRepresentations[i].segmentInfoType;
+                if (availableRepresentations[i].segmentAvailabilityRange === null || availableRepresentations[i].initialization === null ||
+                        ((segmentInfoType === "SegmentBase" || segmentInfoType === "BaseURL") && !availableRepresentations[i].segments)
+                ) {
+                    return false;
+                }
             }
 
             return true;
         },
-
+    
         updateRepresentations = function(adaptation) {
             var self = this,
                 reps,
@@ -182,7 +186,6 @@ Dash.dependencies.RepresentationController = function () {
                 self.abrController.setPlaybackQuality(self.streamProcessor.getType(), self.streamProcessor.getStreamInfo(), getQualityForRepresentation.call(this, currentRepresentation));
                 self.metricsModel.updateManifestUpdateInfo(manifestUpdateInfo, {latency: currentRepresentation.segmentAvailabilityRange.end - self.streamProcessor.playbackController.getTime()});
                 this.notify(Dash.dependencies.RepresentationController.eventList.ENAME_DATA_UPDATE_COMPLETED, {data: data, currentRepresentation: currentRepresentation});
-                addRepresentationSwitch.call(self);
             }
         },
 

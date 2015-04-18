@@ -64,14 +64,14 @@ MediaPlayer = function (context) {
  */
     var VERSION = "1.4.0",
         system,
-        manifestLoader,
         abrController,
         element,
         source,
         protectionData = null,
         streamController,
         rulesController,
-        manifestUpdater,
+        manifest,
+        playbackController,
         metricsExt,
         metricsModel,
         videoModel,
@@ -103,15 +103,20 @@ MediaPlayer = function (context) {
             playing = true;
             this.debug.log("Playback initiated!");
             streamController = system.getObject("streamController");
-            streamController.subscribe(MediaPlayer.dependencies.StreamController.eventList.ENAME_STREAMS_COMPOSED, manifestUpdater);
-            manifestLoader.subscribe(MediaPlayer.dependencies.ManifestLoader.eventList.ENAME_MANIFEST_LOADED, streamController);
-            manifestLoader.subscribe(MediaPlayer.dependencies.ManifestLoader.eventList.ENAME_MANIFEST_LOADED, manifestUpdater);
+            playbackController.subscribe(MediaPlayer.dependencies.PlaybackController.eventList.ENAME_PLAYBACK_SEEKING, streamController);
+            playbackController.subscribe(MediaPlayer.dependencies.PlaybackController.eventList.ENAME_PLAYBACK_TIME_UPDATED, streamController);
+            playbackController.subscribe(MediaPlayer.dependencies.PlaybackController.eventList.ENAME_CAN_PLAY, streamController);
+            playbackController.subscribe(MediaPlayer.dependencies.PlaybackController.eventList.ENAME_PLAYBACK_ERROR, streamController);
+
             streamController.initialize();
-            streamController.setVideoModel(videoModel);
             streamController.setAutoPlay(autoPlay);
             streamController.setProtectionData(protectionData);
             DOMStorage.checkInitialBitrate();
-            streamController.load(source);
+            if (typeof source === "string") {
+                streamController.load(source);
+            } else {
+                streamController.loadWithManifest(manifest);
+            }
             system.mapValue("scheduleWhilePaused", scheduleWhilePaused);
             system.mapOutlet("scheduleWhilePaused", "stream");
             system.mapOutlet("scheduleWhilePaused", "scheduleController");
@@ -221,12 +226,15 @@ MediaPlayer = function (context) {
 
         doReset = function() {
             if (playing && streamController) {
-                streamController.unsubscribe(MediaPlayer.dependencies.StreamController.eventList.ENAME_STREAMS_COMPOSED, manifestUpdater);
-                manifestLoader.unsubscribe(MediaPlayer.dependencies.ManifestLoader.eventList.ENAME_MANIFEST_LOADED, streamController);
-                manifestLoader.unsubscribe(MediaPlayer.dependencies.ManifestLoader.eventList.ENAME_MANIFEST_LOADED, manifestUpdater);
+                playbackController.unsubscribe(MediaPlayer.dependencies.PlaybackController.eventList.ENAME_PLAYBACK_SEEKING, streamController);
+                playbackController.unsubscribe(MediaPlayer.dependencies.PlaybackController.eventList.ENAME_PLAYBACK_TIME_UPDATED, streamController);
+                playbackController.unsubscribe(MediaPlayer.dependencies.PlaybackController.eventList.ENAME_CAN_PLAY, streamController);
+                playbackController.unsubscribe(MediaPlayer.dependencies.PlaybackController.eventList.ENAME_PLAYBACK_ERROR, streamController);
+
                 streamController.reset();
                 abrController.reset();
                 rulesController.reset();
+                playbackController.reset();
                 streamController = null;
                 playing = false;
             }
@@ -264,12 +272,11 @@ MediaPlayer = function (context) {
 
         setup: function() {
             metricsExt = system.getObject("metricsExt");
-            manifestLoader = system.getObject("manifestLoader");
-            manifestUpdater = system.getObject("manifestUpdater");
             abrController = system.getObject("abrController");
             rulesController = system.getObject("rulesController");
             metricsModel = system.getObject("metricsModel");
             DOMStorage = system.getObject("DOMStorage");
+            playbackController = system.getObject("playbackController");
         },
 
         /**
@@ -282,6 +289,7 @@ MediaPlayer = function (context) {
          *
          */
         addEventListener: function (type, listener, useCapture) {
+            type = type.toLowerCase();
             this.eventBus.addEventListener(type, listener, useCapture);
         },
 
@@ -292,6 +300,7 @@ MediaPlayer = function (context) {
          * @memberof MediaPlayer#
          */
         removeEventListener: function (type, listener, useCapture) {
+            type = type.toLowerCase();
             this.eventBus.removeEventListener(type, listener, useCapture);
         },
 
@@ -328,10 +337,7 @@ MediaPlayer = function (context) {
          * @memberof MediaPlayer#
          */
         getVideoModel: function () {
-            var streamInfo = streamController ? streamController.getActiveStreamInfo() : null,
-                stream = streamInfo ? streamController.getStreamById(streamInfo.id) : null;
-
-            return (stream ? stream.getVideoModel() : videoModel);
+            return videoModel;
         },
 
         /**
@@ -570,20 +576,26 @@ MediaPlayer = function (context) {
         },
 
         /**
-         * Use this method to set a source URL to a valid MPD manifest file.
+         * Use this method to set a source URL to a valid MPD manifest file OR
+         * a previously downloaded and parsed manifest object.
          *
-         * @param {string} url A URL to a valid MPD manifest file.
+         * @param {string|Object} source A URL to a valid MPD manifest file, or a
+         * parsed manifest object.
          * @throw "MediaPlayer not initialized!"
          *
          * @memberof MediaPlayer#
          */
-        attachSource: function (url) {
+        attachSource: function (urlOrManifest) {
             if (!initialized) {
                 throw "MediaPlayer not initialized!";
             }
 
-            this.uriQueryFragModel.reset();
-            source = this.uriQueryFragModel.parseURI(url);
+            if (typeof urlOrManifest === "string") {
+                this.uriQueryFragModel.reset();
+                source = this.uriQueryFragModel.parseURI(urlOrManifest);
+            } else {
+                source = urlOrManifest;
+            }
 
             // TODO : update
 
@@ -592,6 +604,15 @@ MediaPlayer = function (context) {
             if (isReady.call(this)) {
                 doAutoPlay.call(this);
             }
+        },
+
+        /**
+         * Use this method to attach an already parsed manifest
+         *
+         * @param m the manifest
+         */
+        attachManifest: function (m) {
+            manifest = m;
         },
 
         /**
@@ -612,6 +633,7 @@ MediaPlayer = function (context) {
         reset: function() {
             this.attachSource(null);
             this.attachView(null);
+            manifest = null;
         },
 
         /**
@@ -766,7 +788,8 @@ MediaPlayer.events = {
     METRIC_UPDATED: "metricupdated",
     METRIC_ADDED: "metricadded",
     MANIFEST_LOADED: "manifestloaded",
-    SWITCH_STREAM: "streamswitched",
+    STREAM_SWITCH_STARTED: "streamswitchstarted",
+    STREAM_SWITCH_COMPLETED: "streamswitchcompleted",
     STREAM_INITIALIZED: "streaminitialized",
     TEXT_TRACK_ADDED: "texttrackadded",
     BUFFER_LOADED: "bufferloaded",
