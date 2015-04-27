@@ -61,14 +61,17 @@ Dash.dependencies.DashMetricsExtensions = function () {
                 adaptationSetArrayIndex,
                 representationArrayIndex;
 
-            adaptationSetArray = period.AdaptationSet_asArray;
-            for (adaptationSetArrayIndex = 0; adaptationSetArrayIndex < adaptationSetArray.length; adaptationSetArrayIndex = adaptationSetArrayIndex + 1) {
-                adaptationSet = adaptationSetArray[adaptationSetArrayIndex];
-                representationArray = adaptationSet.Representation_asArray;
-                for (representationArrayIndex = 0; representationArrayIndex < representationArray.length; representationArrayIndex = representationArrayIndex + 1) {
-                    representation = representationArray[representationArrayIndex];
-                    if (representationId === representation.id) {
-                        return representation;
+            for (periodArrayIndex = 0; periodArrayIndex < periodArray.length; periodArrayIndex = periodArrayIndex + 1) {
+                period = periodArray[periodArrayIndex];
+                adaptationSetArray = period.AdaptationSet_asArray;
+                for (adaptationSetArrayIndex = 0; adaptationSetArrayIndex < adaptationSetArray.length; adaptationSetArrayIndex = adaptationSetArrayIndex + 1) {
+                    adaptationSet = adaptationSetArray[adaptationSetArrayIndex];
+                    representationArray = adaptationSet.Representation_asArray;
+                    for (representationArrayIndex = 0; representationArrayIndex < representationArray.length; representationArrayIndex = representationArrayIndex + 1) {
+                        representation = representationArray[representationArrayIndex];
+                        if (representationId === representation.id) {
+                            return representation;
+                        }
                     }
                 }
             }
@@ -76,31 +79,7 @@ Dash.dependencies.DashMetricsExtensions = function () {
             return null;
         },
 
-        adaptationIsType = function (adaptation, bufferType) {
-            return this.manifestExt.getIsTypeOf(adaptation, bufferType);
-        },
-
-        findMaxBufferIndex = function (period, bufferType) {
-            var adaptationSet,
-                adaptationSetArray,
-                representationArray,
-                adaptationSetArrayIndex;
-
-            if (!period || !bufferType) return -1;
-
-            adaptationSetArray = period.AdaptationSet_asArray;
-            for (adaptationSetArrayIndex = 0; adaptationSetArrayIndex < adaptationSetArray.length; adaptationSetArrayIndex = adaptationSetArrayIndex + 1) {
-                adaptationSet = adaptationSetArray[adaptationSetArrayIndex];
-                representationArray = adaptationSet.Representation_asArray;
-                if (adaptationIsType.call(this, adaptationSet, bufferType)) {
-                    return representationArray.length;
-                }
-            }
-
-            return -1;
-        },
-
-        getBandwidthForRepresentation = function (representationId, periodId) {
+        getBandwidthForRepresentation = function (representationId) {
             var self = this,
                 manifest = self.manifestModel.getValue(),
                 representation,
@@ -125,14 +104,15 @@ Dash.dependencies.DashMetricsExtensions = function () {
             return representationIndex;
         },
 
-        getMaxIndexForBufferType = function (bufferType, periodIdx) {
-            var self = this,
-                manifest = self.manifestModel.getValue(),
-                maxIndex,
-                period = manifest.Period_asArray[periodIdx];
+        getMaxIndexForBufferType = function (bufferType, periodId) {
+            var abrController = this.system.getObject("abrController"),
+                idx=0;
 
-            maxIndex = findMaxBufferIndex.call(this, period, bufferType);
-            return maxIndex;
+            if (abrController) {
+                idx = abrController.getTopQualityIndexFor(bufferType, periodId);
+            }
+
+            return idx;
         },
 
         getMaxAllowedIndexForBufferType = function (bufferType, periodId) {
