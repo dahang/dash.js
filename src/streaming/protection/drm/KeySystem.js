@@ -29,69 +29,89 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-MediaPlayer.dependencies.protection.KeySystem = {
+/**
+ * Defines the public interface for all Key Systems (DRMs) supported
+ * by the player.
+ *
+ * @interface KeySystem
+ */
 
-    /**
-     * Key system name string (e.g. 'org.w3.clearkey')
-     *
-     * {DOMString}
-     *
-     systemString: undefined,
-     */
+/**
+ * Key system name string (e.g. 'org.w3.clearkey')
+ *
+ * @instance
+ * @name systemString
+ * @memberof KeySystem
+ * @readonly
+ * @type String
+ */
 
-    /**
-     * Key system UUID in the form '01234567-89ab-cdef-0123-456789abcdef'
-     *
-     * {DOMString}
-     *
-     uuid: undefined,
-     */
+/**
+ * Key system UUID in the form '01234567-89ab-cdef-0123-456789abcdef'
+ *
+ * @instance
+ * @name uuid
+ * @memberof KeySystem
+ * @readonly
+ * @type String
+ */
 
-    /**
-     * The scheme ID URI for this key system in the form
-     * 'urn:uuid:01234567-89ab-cdef-0123-456789abcdef' as used
-     * in DASH ContentProtection elements
-     *
-     * {DOMString}
-     *
-     schemeIdURI: undefined,
-     */
+/**
+ * The scheme ID URI for this key system in the form
+ * 'urn:uuid:01234567-89ab-cdef-0123-456789abcdef' as used
+ * in DASH ContentProtection elements
+ *
+ * @instance
+ * @name schemeIdURI
+ * @memberof KeySystem
+ * @readonly
+ * @type String
+ */
 
-    /**
-     * Request a content key/license from a remote server
-     *
-     * @param msg the request message from the CDM
-     * @param laURL default URL provided by the CDM
-     * @param requestData object that will be returned in the
-     * ENAME_LICENSE_REQUEST_COMPLETE event
-     *
-     doLicenseRequest: function(msg, laURL, requestData) {},
-     */
+/**
+ * Parse DRM-specific init data from the ContentProtection
+ * element.
+ *
+ * @function
+ * @name KeySystem#getInitData
+ * @param {Object} contentProtection the json-style contentProtection
+ * object representing the ContentProtection element parsed from the
+ * MPD XML document.
+ * @returns {ArrayBuffer} EME initialization data
+ */
 
-    /**
-     * Parse DRM-specific init data from the ContentProtection
-     * element.
-     *
-     * @param contentProtection the ContentProtection element
-     * @returns {ArrayBuffer} initialization data
-     *
-     getInitData: function(contentProtection) { return null; },
-     */
+/**
+ * For some key systems, the CDM message contains HTTP headers that
+ * can be parsed by the application and attached to the license request.
+ * Returns a header object with key/value pairs as object properties/values
+ *
+ * @function
+ * @name KeySystem#getRequestHeadersFromMessage
+ * @param {ArrayBuffer} message the CDM message
+ * @returns {?Object} headers object with header names as the object property
+ * names and header values as the corresponding object property values.  Return
+ * null if no such headers were found or if the mechanism is not supported by
+ * this key system
+ */
 
-    /**
-     * Checks for equality of initialization data.  CDMs may send "needkey"
-     * events multiple times for the same initialization data, and players may
-     * wish to avoid creating new sessions for each needkey event if the init
-     * data is the same.
-     *
-     * @param initData1
-     * @param initData2
-     *
-     initDataEquals: function(initData1, initData2) {},
-     */
+/**
+ * For some key systems, the CDM message contains more than just the
+ * license request data.  This method will pull the license request from
+ * the CDM message, if necessary.
+ *
+ * @function
+ * @name KeySystem#getLicenseRequestFromMessage
+ * @param message {ArrayBuffer} the CDM message
+ * @returns {Uint8Array} the license request message as will be passed to
+ * XMLHttpRequest.send()
+ */
 
-    eventList: {
-        ENAME_LICENSE_REQUEST_COMPLETE: "licenseRequestComplete"
-    }
-};
-
+/**
+ * Returns a license server URL as parsed from key system initialization data (PSSH).
+ *
+ * @function
+ * @name KeySystem#getLicenseServerURLFromInitData
+ * @param initData {ArrayBuffer} the initialization data.  This is just the "Data" field
+ * from the PSSH box definition
+ * @returns {?string} The license server URL or null if URL is not available in initData
+ */
